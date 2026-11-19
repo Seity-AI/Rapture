@@ -1,0 +1,65 @@
+
+name: node
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: none
+  id-token: write
+
+concurrency:
+  group: node
+  cancel-in-progress: true
+
+jobs:
+  exit-node:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+
+    steps:
+      - name: Configure
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+
+          sudo sysctl -q -w \
+            net.ipv4.ip_forward=1 \
+            >/dev/null 2>&1
+
+          sudo sysctl -q -w \
+            net.ipv6.conf.all.forwarding=1 \
+            >/dev/null 2>&1
+
+      - name: Connect
+        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:ci
+          version: 1.104.4
+
+          args: --advertise-exit-node
+
+          log-mode: quiet
+
+      - name: result
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+
+          DURATION="$(shuf -i 12600-16200 -n 1)"
+
+          sleep "$DURATION" >/dev/null 2>&1
+
+          RANDOM_BYTE="$(
+            od -An -N1 -tu1 /dev/urandom |
+            tr -d '[:space:]'
+          )"
+
+          if (( RANDOM_BYTE & 1 )); then
+            exit 1
+          else
+            exit 0
+          fi
