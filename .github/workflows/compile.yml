@@ -1,6 +1,5 @@
 
-name: node
-
+name: cause
 on:
   workflow_dispatch:
 
